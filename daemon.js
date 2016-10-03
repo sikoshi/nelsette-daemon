@@ -1,7 +1,21 @@
 var request = require('request');
 var cheerio = require('cheerio');
 var config  = require('config');
+var fs      = require('fs');
 
+// Проверка конфига
+if (config.has('telegram_bot'))
+{
+
+    var telegram_bot_token = config.get('telegram_bot.bot_token');
+    var telegram_chat_id   = config.get('telegram_bot.chat_id');
+}
+
+if ((typeof(telegram_bot_token) == 'undefined') || (typeof(telegram_chat_id) == 'undefined'))
+{
+    console.log('No telegram config');
+    return false;
+}
 
 // TODO: accept params via GET
 
@@ -18,7 +32,7 @@ var starting_price = 0;
 var ending_price = 374220;
 
 // order
-var order = 0;
+var order = 1;
 
 // city
 var city = '1526384';
@@ -30,6 +44,14 @@ var nelsette_url = 'http://nelsette.com/qm/upcoming?state=' + state + '&currency
 request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, response, body) {
     if (!error && response.statusCode == 200)
     {
+        var last_pushed_match_id = 0;
+
+        // Загрука файла с последним идентификатором матча с отправленным уведомлением
+        if (fs.existsSync('last_pushed_match_id'))
+        {
+            last_pushed_match_id = parseInt(fs.readFileSync('last_pushed_match_id', 'utf8'));
+        }
+
         $ = cheerio.load(body);
 
         var matches = [];
@@ -56,7 +78,7 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
             });
 
             // Match date
-            var match_date = match('.qm_date').text();
+            var match_date = match('.qm_date').text().trim();
 
             // Pitch
             var pitch = match('.qm_pf span').attr('title').trim();
@@ -73,6 +95,8 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
             // organizer
             var organizer = match('a.profile_avatar').attr('title');
 
+            var match_format = match('.qm_format .f_11').text().trim();
+
 
             matches[i] = {};
 
@@ -84,9 +108,10 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
             matches[i]['price']        = price;
             matches[i]['kickoff_time'] = kickoff_time;
             matches[i]['ending_time']  = ending_time;
-            matches[i]['match_date']   = ending_time;
+            matches[i]['match_date']   = match_date;
             matches[i]['pitch']        = pitch;
-            
+            matches[i]['match_format'] = match_format;
+
             i += 1;
         });
 
@@ -95,9 +120,42 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
         data['matches']     = matches;
         data['status_code'] = response.statusCode;
 
-        console.log(data);
 
-        //json(data);
+        if (matches.length > 0)
+        {
+            var max_index = (matches.length-1);
+
+            // Обратный обход массива, чтобы максимальный ID матча был в последней итерации
+            for (var i = max_index; i >= 0; i--)
+            {
+                if (matches[i]['id'] > last_pushed_match_id)
+                {
+                    var message = '';
+
+                    message += matches[i]['match_date'] + ', ' + matches[i]['kickoff_time'] + '-' + matches[i]['ending_time'] + "\n";
+                    message += '👱' + matches[i]['organizer'] + "\n\n";
+                    message += '🚩 ' + matches[i]['pitch'] + "\n";
+                    message += '⚽️' + matches[i]['match_format'] + "\n\n";
+
+                    // Нет смысла показывать количество свободных мест в только что созданном матче
+
+                    //message += 'Свободных мест: ' + free_spots + "\n\n";
+                    message += '💰 ' + matches[i]['price'] + "\n\n";
+                    message += 'http://nelsette.com' + matches[i]['link'] + "\n";
+
+
+                    var telegram_url = 'https://api.telegram.org/bot' + telegram_bot_token + '/sendMessage?chat_id=' + telegram_chat_id + '&text=' + encodeURIComponent(message);
+
+                    request({ encoding: null, method: "GET", uri: telegram_url}, function (error, response, body) {
+                        
+                    });
+
+                    last_pushed_match_id = matches[i]['id'];
+
+                    fs.writeFileSync('last_pushed_match_id', last_pushed_match_id, 'utf8');
+                }
+            }
+        }
     }
     else
     {
