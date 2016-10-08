@@ -2,3 +2,5 @@
 config/default.json
 node_modules
 last_pushed_match_id
+runtime
+logs

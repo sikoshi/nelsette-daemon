@@ -1,12 +1,13 @@
-var request = require('request');
-var cheerio = require('cheerio');
-var config  = require('config');
-var fs      = require('fs');
+var request  = require('request');
+var cheerio  = require('cheerio');
+var config   = require('config');
+var fs       = require('fs');
+var swig     = require('swig');
+var template = swig.compileFile('templates/new_match.tpl');
 
 // Проверка конфига
 if (config.has('telegram_bot'))
 {
-
     var telegram_bot_token = config.get('telegram_bot.bot_token');
     var telegram_chat_id   = config.get('telegram_bot.chat_id');
 }
@@ -130,26 +131,14 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
             {
                 if (matches[i]['id'] > last_pushed_match_id)
                 {
-                    var message = '';
-
-                    message += matches[i]['match_date'] + ', ' + matches[i]['kickoff_time'] + '-' + matches[i]['ending_time'] + "\n";
-                    message += '👱' + matches[i]['organizer'] + "\n\n";
-                    message += '🚩 ' + matches[i]['pitch'] + "\n";
-                    message += '⚽️' + matches[i]['match_format'] + "\n\n";
-
-                    // Нет смысла показывать количество свободных мест в только что созданном матче
-
-                    //message += 'Свободных мест: ' + free_spots + "\n\n";
-                    message += '💰 ' + matches[i]['price'] + "\n\n";
-                    message += 'http://nelsette.com' + matches[i]['link'] + "\n";
-
+                    var message = template(matches[i]);
 
                     var telegram_url = 'https://api.telegram.org/bot' + telegram_bot_token + '/sendMessage?chat_id=' + telegram_chat_id + '&text=' + encodeURIComponent(message);
 
                     request({ encoding: null, method: "GET", uri: telegram_url}, function (error, response, body) {
-                        
-                    });
 
+                    });
+                    
                     last_pushed_match_id = matches[i]['id'];
 
                     fs.writeFileSync('last_pushed_match_id', last_pushed_match_id, 'utf8');
