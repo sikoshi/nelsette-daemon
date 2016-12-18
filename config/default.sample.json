@@ -2,5 +2,9 @@
     "telegram_bot" : {
         "bot_token" : "",
         "chat_id"   : ""
+    },
+    "ignore_list" : {
+        "users"   : [],
+        "pitches" : []
     }
 }

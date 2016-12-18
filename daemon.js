@@ -5,7 +5,15 @@ var fs       = require('fs');
 var swig     = require('swig');
 var template = swig.compileFile('templates/new_match.tpl');
 
-// Проверка конфига
+var ignored_pitches = [];
+
+// Loading config
+
+if (config.has('ignore_list.pitches'))
+{
+    ignored_pitches = config.get('ignore_list.pitches');
+}
+
 if (config.has('telegram_bot'))
 {
     var telegram_bot_token = config.get('telegram_bot.bot_token');
@@ -47,7 +55,7 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
     {
         var last_pushed_match_id = 0;
 
-        // Загрука файла с последним идентификатором матча с отправленным уведомлением
+        // Loading file with last max match ID
         if (fs.existsSync('last_pushed_match_id'))
         {
             last_pushed_match_id = parseInt(fs.readFileSync('last_pushed_match_id', 'utf8'));
@@ -127,18 +135,21 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
             var max_index = (matches.length-1);
 
             // Обратный обход массива, чтобы максимальный ID матча был в последней итерации
+            // Reverse array loop
             for (var i = max_index; i >= 0; i--)
             {
-                if (matches[i]['id'] > last_pushed_match_id)
+                if ((matches[i]['id'] > last_pushed_match_id) && (ignored_pitches.indexOf(matches[i]['pitch']) < 0))
                 {
                     var message = template(matches[i]);
-
+/*
                     var telegram_url = 'https://api.telegram.org/bot' + telegram_bot_token + '/sendMessage?chat_id=' + telegram_chat_id + '&text=' + encodeURIComponent(message);
 
                     request({ encoding: null, method: "GET", uri: telegram_url}, function (error, response, body) {
-
-                    });
                     
+                    });*/
+
+                    console.log(message);
+
                     last_pushed_match_id = matches[i]['id'];
 
                     fs.writeFileSync('last_pushed_match_id', last_pushed_match_id, 'utf8');
