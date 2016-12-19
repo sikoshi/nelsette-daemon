@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/sikoshi/nelsette-daemon#readme",
   "dependencies": {
+    "bitly": "^4.1.1",
     "cheerio": "^0.22.0",
     "config": "^1.21.0",
     "fs": "0.0.1-security",

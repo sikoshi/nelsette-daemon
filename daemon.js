@@ -141,15 +141,13 @@ request({ encoding: null, method: "GET", uri: nelsette_url}, function (error, re
                 if ((matches[i]['id'] > last_pushed_match_id) && (ignored_pitches.indexOf(matches[i]['pitch']) < 0))
                 {
                     var message = template(matches[i]);
-/*
+
                     var telegram_url = 'https://api.telegram.org/bot' + telegram_bot_token + '/sendMessage?chat_id=' + telegram_chat_id + '&text=' + encodeURIComponent(message);
 
                     request({ encoding: null, method: "GET", uri: telegram_url}, function (error, response, body) {
+
+                    });
                     
-                    });*/
-
-                    console.log(message);
-
                     last_pushed_match_id = matches[i]['id'];
 
                     fs.writeFileSync('last_pushed_match_id', last_pushed_match_id, 'utf8');
